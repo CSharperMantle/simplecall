@@ -15,13 +15,13 @@
 
 #define MAX_SYSCALL_ARGS 6
 
-#define HXD_FPERROR(fd_, fun_, ...)                                                                \
+#define HXD_FPERROR(fd_, done_, fun_, ...)                                                         \
         do {                                                                                       \
                 hxd_error_t err = (fun_)(__VA_ARGS__);                                             \
                 if (err) {                                                                         \
                         fprintf((fd_), #fun_ ": %s\n", hxd_strerror(err));                         \
+                        goto done_;                                                                \
                 }                                                                                  \
-                                                                                                   \
         } while (0)
 
 static uint64_t parse_int(const char *str) {
@@ -39,13 +39,13 @@ static uint64_t parse_int(const char *str) {
 static void *parse_binary(const char *hex_str) {
         const size_t len = strlen(hex_str);
         if (len % 2 != 0) {
-                fprintf(stderr, "Error: 'b' strings should be multiples of bytes in hex\n");
+                fprintf(stderr, "error: 'b' strings should be multiples of bytes in hex\n");
                 exit(121);
         }
         const size_t bin_len = len / 2;
         uint8_t *const buffer = malloc(bin_len);
         if (!buffer) {
-                perror("malloc");
+                perror("error: malloc");
                 exit(122);
         }
         for (size_t i = 0; i < bin_len; i++) {
@@ -54,32 +54,32 @@ static void *parse_binary(const char *hex_str) {
         return buffer;
 }
 
-static int hexdump_hxd(FILE *out, const void *buf, size_t len) {
+static void hexdump_hxd(FILE *out, const void *buf, size_t len) {
         hxd_error_t err = 0;
         struct hexdump *x = hxd_open(&err);
         if (!x) {
                 fprintf(stderr, "hxd_open: %s\n", hxd_strerror(err));
-                return -1;
+                return;
         }
-        HXD_FPERROR(stderr, hxd_compile, x, HEXDUMP_C, 0);
-        HXD_FPERROR(stderr, hxd_write, x, buf, len);
-        HXD_FPERROR(stderr, hxd_flush, x);
+        HXD_FPERROR(stderr, done, hxd_compile, x, HEXDUMP_C, 0);
+        HXD_FPERROR(stderr, done, hxd_write, x, buf, len);
+        HXD_FPERROR(stderr, done, hxd_flush, x);
         char tmp[4096];
         size_t n = 0;
         while ((n = hxd_read(x, tmp, sizeof tmp)) > 0) {
                 if (fwrite(tmp, 1, n, out) != n) {
-                        perror("fwrite");
-                        hxd_close(x);
-                        return -1;
+                        perror("error: fwrite");
+                        goto done;
                 }
         }
+done:
         hxd_close(x);
-        return 0;
+        return;
 }
 
 int main(int argc, char *argv[]) {
         if (argc < 2) {
-                fprintf(stderr, "Usage: %s <syscall ID> [ARGUMENT]...\n", argv[0]);
+                fprintf(stderr, "usage: %s <syscall ID> [ARGUMENT]...\n", argv[0]);
                 return 121;
         }
 
@@ -97,13 +97,13 @@ int main(int argc, char *argv[]) {
                 const int narg = i - 2;
 
                 if (arg[0] == ':') {
-                        fprintf(stderr, "Error: Bad argument %d: '%s'\n", narg, arg);
+                        fprintf(stderr, "error: bad argument %d: '%s'\n", narg, arg);
                         return 121;
                 }
                 char *const spec = strtok(arg, ":");
                 char *const data = strtok(NULL, ":");
                 if (spec == NULL || data == NULL) {
-                        fprintf(stderr, "Error: Bad argument %d: format\n", narg);
+                        fprintf(stderr, "error: bad argument %d: format\n", narg);
                         return 121;
                 }
 
@@ -133,13 +133,13 @@ int main(int argc, char *argv[]) {
                         const size_t size = (size_t)parse_int(data);
                         void *const p = malloc(size);
                         if (p == NULL) {
-                                perror("malloc");
+                                perror("error: malloc");
                                 return 121;
                         }
                         val = (long)p;
                         val_out_size = size;
                 } else {
-                        fprintf(stderr, "Error: Bad argument %d: unknown spec '%s'\n", narg, spec);
+                        fprintf(stderr, "error: bad argument %d: unknown spec '%s'\n", narg, spec);
                         return 121;
                 }
                 args[narg] = val;
@@ -147,10 +147,11 @@ int main(int argc, char *argv[]) {
         }
 
         const long ret = syscall(sysno, args[0], args[1], args[2], args[3], args[4], args[5]);
+        const int errno_ = errno;
         for (size_t i = 0; i < MAX_SYSCALL_ARGS; i++) {
                 if (args_out_size[i] != 0) {
                         void *const p = (void *)args[i];
-                        printf("Out param %zu:\n", i);
+                        printf("%zu:\n", i);
                         hexdump_hxd(stdout, p, args_out_size[i]);
                         putchar('\n');
                         free(p);
@@ -158,7 +159,8 @@ int main(int argc, char *argv[]) {
         }
 
         if (ret == -1) {
-                return errno;
+                printf("syscall: %s\n", strerror(errno_));
+                return errno_;
         }
 
         return 0;
