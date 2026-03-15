@@ -10,23 +10,21 @@ TARGET := simplecall
 SRCS := simplecall.c third_party/hexdump/hexdump.c
 MAN := simplecall.1
 
-CFLAGS += -Ithird_party
-
 .PHONY: all clean install uninstall
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -Ithird_party -o $@ $^ $(LDFLAGS)
 
 clean:
-	rm -vf $(TARGET)
+	rm -f $(TARGET)
 
 install: $(TARGET) $(MAN)
-	install -vd $(DESTDIR)$(BINDIR) $(DESTDIR)$(MAN1DIR)
-	install -vm 0755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
-	install -vm 0644 $(MAN) $(DESTDIR)$(MAN1DIR)/$(MAN)
+	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(MAN1DIR)
+	install -m 0755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
+	install -m 0644 $(MAN) $(DESTDIR)$(MAN1DIR)/$(MAN)
 
 uninstall:
-	rm -vf $(DESTDIR)$(BINDIR)/$(TARGET)
-	rm -vf $(DESTDIR)$(MAN1DIR)/$(MAN)
+	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
+	rm -f $(DESTDIR)$(MAN1DIR)/$(MAN)
