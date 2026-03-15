@@ -1,0 +1,95 @@
+.TH SIMPLECALL 1 "March 2026" "simplecall" "User Commands"
+.SH NAME
+simplecall \- perform basic syscalls with given arguments
+.SH SYNOPSIS
+.B simplecall
+.I "syscall-id"
+.RI [ argument ]...
+.SH DESCRIPTION
+.B simplecall
+decodes each
+.I argument
+and passes the decoded values to the syscall identified by
+.IR syscall-id .
+
+Each argument has the form:
+.PP
+.RS
+\fIspec\fR:\fIdata\fR
+.RE
+.PP
+Supported specifiers are:
+.TP
+.B i8, i16, i32, i64
+Signed integer.
+.I data
+is parsed as integer text (decimal by default, \fB0o\fR prefix for octal, \fB0x\fR prefix for hexadecimal), converted to the platform's widest integer, truncated to the requested width, then sign-extended to the platform
+.B long
+used for syscall arguments.
+.TP
+.B u8, u16, u32, u64
+Unsigned integer.
+.I data
+is parsed as integer text (decimal by default, \fB0o\fR prefix for octal, \fB0x\fR prefix for hexadecimal), converted to the platform's widest integer, truncated to the requested width, then zero-extended to the platform
+.B long
+used for syscall arguments.
+.TP
+.B s
+String.
+.I data
+is passed as a pointer to a C-style string buffer.
+.TP
+.B b
+Binary buffer.
+.I data
+is interpreted as hexadecimal bytes (two hex digits per byte) and passed as a pointer to the allocated buffer.
+.TP
+.B o
+Output buffer.
+.I data
+is parsed as a size in bytes (decimal, \fB0o\fR, or \fB0x\fR) and a buffer of that size is allocated; the pointer is passed to the syscall.
+.SH EXIT STATUS
+.TP
+.B 0
+Syscall succeeded.
+.TP
+.B 120
+Too many syscall arguments.
+.TP
+.B 121
+Bad argument format/specifier, invalid binary length, or allocation failure in output-buffer path.
+.TP
+.B 122
+Allocation failure in binary-buffer path.
+.TP
+.B 2..255
+A propagated
+.B errno
+value when syscall fails.
+.SH EXAMPLES
+.TP
+.B simplecall 93
+Invoke syscall 93 with no arguments.
+.TP
+.B simplecall 1 i8:123 u64:0xdeadbeefcafebabe
+Invoke syscall 1 with two arguments: 123 and 0xdeadbeefcafebabe.
+.TP
+.B simplecall 2 's: Hello World: from simplecall!' u8:1
+Invoke syscall 2 with two arguments: pointer to string " Hello World: from simplecall!" and integer 1.
+.TP
+.B simplecall 3 b:aabbccdd
+Invoke syscall 3 with one argument: pointer to 4-byte buffer AA BB CC DD.
+.SH NOTES
+This program does not impose semantics on the syscall and does not interpret successful syscall return values.
+.PP
+Current source is only tested for LoongArch64 compatibility.
+.SH SEE ALSO
+.BR syscall (2),
+.BR errno (3)
+.SH BUGS
+\%https://github.com/CSharperMantle/simplecall/issues
+.SH AUTHORS
+Written by
+.MT rong.bao@csmantle.top
+Rong "Mantle" Bao
+.ME\&.
