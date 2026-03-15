@@ -79,6 +79,9 @@ Invoke syscall 2 with two arguments: pointer to string " Hello World: from simpl
 .TP
 .B simplecall 3 b:aabbccdd
 Invoke syscall 3 with one argument: pointer to 4-byte buffer AA BB CC DD.
+.TP
+.B simplecall 17 o:64 u8:64
+Invoke syscall 17 with two argument: a pointer to a buffer of 64-bytes, and an integer 64.
 .SH NOTES
 This program does not impose semantics on the syscall and does not interpret successful syscall return values.
 .PP
