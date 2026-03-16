@@ -1,5 +1,5 @@
 CC ?= cc
-CFLAGS ?= -O2 -Wall -Wextra -std=c11
+CFLAGS ?= -std=c11 -Wall -Wextra -Wno-unterminated-string-initialization -O2 -g
 LDFLAGS ?=
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin

@@ -7,10 +7,23 @@
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+
 #include <hexdump/hexdump.h>
 
-#if !(defined(__loongarch__) && __loongarch_grlen == 64)
-#error Only tested on LoongArch64.
+#if !defined(__linux__)
+#  error Unsupported OS.
+#endif
+
+#if (defined(__loongarch__) && __loongarch_grlen == 64)
+#  define MAX_SYSCALL_ARGS 6
+#  define SYSCALL(num_, args_)                                                                     \
+          (syscall((num_), (args_)[0], (args_)[1], (args_)[2], (args_)[3], (args_)[4], (args_)[5]))
+#elif defined(__x86_64__)
+#  define MAX_SYSCALL_ARGS 6
+#  define SYSCALL(num_, args_)                                                                     \
+          (syscall((num_), (args_)[0], (args_)[1], (args_)[2], (args_)[3], (args_)[4], (args_)[5]))
+#else
+#  error Unsupported architecture.
 #endif
 
 #define MAX_SYSCALL_ARGS 6
@@ -146,7 +159,7 @@ int main(int argc, char *argv[]) {
                 args_out_size[narg] = val_out_size;
         }
 
-        const long ret = syscall(sysno, args[0], args[1], args[2], args[3], args[4], args[5]);
+        const long ret = SYSCALL(sysno, args);
         const int errno_ = errno;
         for (size_t i = 0; i < MAX_SYSCALL_ARGS; i++) {
                 if (args_out_size[i] != 0) {
